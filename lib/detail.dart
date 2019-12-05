@@ -13,6 +13,20 @@ class _InfoState extends State<Info> {
   final List<String> provinces = ['Province', 'ສັງທອງ', 'ວັງວຽງ', 'ຫາດຊາຍຟອງ', 'test', 'nottest'];
   final List<String> districts = ['District', 'ສັງທອງ', 'ວັງວຽງ', 'ຫາດຊາຍຟອງ', 'test', 'nottest'];
   final List<String> villages = ['Village', 'ສັງທອງ', 'ວັງວຽງ', 'ຫາດຊາຍຟອງ', 'test', 'nottest'];
+
+  int groupValue;
+  String _gender;
+  void getGender(int e){
+    setState(() {
+      if(e == 1){
+        groupValue = 1;
+        _gender = 'Male';
+      }else if(e == 2){
+        groupValue = 2;
+        _gender = 'Female';
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,8 +65,9 @@ class _InfoState extends State<Info> {
                               children: <Widget>[
                                 Radio(
                                   value: 1,
-                                  groupValue: 2,
-
+                                  groupValue: groupValue,
+                                  onChanged: (int e) => getGender(e),
+                                  activeColor: Colors.red[600],
                                 ),
                                 Text("ຊາຍ", style: TextStyle(
                                   fontSize: 20.0,
@@ -65,8 +80,9 @@ class _InfoState extends State<Info> {
                               children: <Widget>[
                                 Radio(
                                   value: 2,
-                                  groupValue: 2,
-
+                                  groupValue: groupValue,
+                                  onChanged: (int e) => getGender(e),
+                                  activeColor: Colors.red[600],
                                 ),
                                 Text("ຍິງ", style: TextStyle(
                                   fontSize: 20.0,
@@ -221,7 +237,6 @@ class _InfoState extends State<Info> {
                               ),
                             )
                         ),
-
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 20.0),
                           child: RaisedButton(
