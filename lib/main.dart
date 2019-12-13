@@ -16,6 +16,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  var newLat, newLng;
   List<Marker> allMarkers = [];
   GoogleMapController _controller;
   static LatLng latLng;
@@ -54,10 +55,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _updatePosition(CameraPosition _position) {
-//    print('inside updatePosition ${_position.target.latitude} ${_position.target.longitude}');
-    var newLat, newLng;
-    newLat = _position.target.latitude;
-    newLng = _position.target.longitude;
+    setState(() {
+      newLat = _position.target.latitude;
+      newLng = _position.target.longitude;
+    });
     print("Lat is: ${newLat} and Lng is: ${newLng}");
     Marker marker = allMarkers.firstWhere(
             (p) => p.markerId == MarkerId('myMarker'),
@@ -148,7 +149,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void detailPage(){
   setState(() {
     Navigator.of(context).push(new MaterialPageRoute(builder: (BuildContext context) =>
-    new Info()
+    new Info(lng: newLng, lat: newLat)
     ));
   });
   }

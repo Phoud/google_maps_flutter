@@ -1,21 +1,98 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_radio_button_group/flutter_radio_button_group.dart';
 import 'package:searchable_dropdown/searchable_dropdown.dart';
+import 'package:http/http.dart' as http;
 class Info extends StatefulWidget {
+
+  var lng;
+  var lat;
+
+  Info({Key key, this.lng, Key info, this.lat}) : super(key: key);
   @override
-  _InfoState createState() => _InfoState();
+  _InfoState createState() => _InfoState(lng, lat);
 }
 
 class _InfoState extends State<Info> {
-  String dropProvince = 'Province';
-  String dropDistrict = 'District';
-  String dropVillage = 'Village';
-  final List<String> provinces = ['Province', 'ສັງທອງ', 'ວັງວຽງ', 'ຫາດຊາຍຟອງ', 'test', 'nottest'];
-  final List<String> districts = ['District', 'ສັງທອງ', 'ວັງວຽງ', 'ຫາດຊາຍຟອງ', 'test', 'nottest'];
-  final List<String> villages = ['Village', 'ສັງທອງ', 'ວັງວຽງ', 'ຫາດຊາຍຟອງ', 'test', 'nottest'];
+  var lng;
+  var lat;
 
+  _InfoState(this.lng, this.lat);
+  var api = 'http://134.209.170.235/api/general/fetch/address';
+  var postAPI = 'http://134.209.170.235/api/customer/post';
+  var provinces, districts;
+  final String splitter = '__val__';
+
+  var _name = TextEditingController();
+  var _surname = TextEditingController();
+  var _lane = TextEditingController();
+
+  List<DropdownMenuItem<String>> provinceData = [];
+  List<DropdownMenuItem<String>> districtData = [];
+  List<DropdownMenuItem<String>> villagesData = [];
+
+  Future<dynamic> getAddressData() async {
+    http.Response res = await http.get(Uri.encodeFull(api));
+    return jsonDecode(utf8.decode(res.bodyBytes))['payload'];
+  }
+
+  Future<dynamic> storeAddressData() async{
+    var res = await this.getAddressData();
+
+
+    setState(() {
+
+      provinces = res['provinces'];
+      for(var province in provinces) {
+        provinceData.add(
+            new DropdownMenuItem<String>(
+              value: province['id'].toString() + splitter + province['name'],
+              child: new Text(province['name']),
+            ));
+      }
+
+      districts = res['districts'];
+
+    });
+
+  }
+
+  Future<dynamic> getVillagesData(String id) async {
+    var villageUri = 'http://134.209.170.235/api/general/fetch/address/villages/' + id;
+    http.Response res = await http.get(Uri.encodeFull(villageUri));
+    return jsonDecode(utf8.decode(res.bodyBytes))['payload'];
+  }
+
+  Future<dynamic> storeVillagesData(String id) async{
+
+    String _id = getCleanId(id);
+
+    var villages = await this.getVillagesData(_id);
+
+
+    setState(() {
+
+      villagesData.clear();
+      selectedVillage = null;
+
+      for(var village in villages) {
+        villagesData.add(
+           new DropdownMenuItem<String>(
+              value: village['id'].toString() + splitter + village['name'],
+              child: new Text(village['name']),
+            ));
+      }
+
+    });
+
+  }
+
+
+  var selectedProvince, selectedDistrict, selectedVillage;
   int groupValue;
   String _gender;
+
   void getGender(int e){
     setState(() {
       if(e == 1){
@@ -27,8 +104,62 @@ class _InfoState extends State<Info> {
       }
     });
   }
+
+  void setDistrictsOfProvince(String id){
+    setState(() {
+
+      String _id = getCleanId(id);
+
+      selectedDistrict = null;
+      selectedVillage = null;
+      districtData.clear();
+      villagesData.clear();
+
+      for(var district in districts) {
+        if(district['province_id'].toString() == _id)
+          districtData.add(
+              new DropdownMenuItem<String>(
+                value: district['id'].toString() + splitter + district['name'],
+                child: new Text(district['name']),
+              ));
+      }
+
+    });
+  }
+
+  String getCleanId(String id){
+    return id.split(splitter)[0];
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    storeAddressData();
+  }
+  @override
+  void dispose() {
+    _name.dispose();
+    _surname.dispose();
+    _lane.dispose();
+
+    super.dispose();
+  }
+
+  Future postCustomer(var body) async{
+    return await http.post(Uri.encodeFull(postAPI), body: body, headers: {"Accept": "application/json"})
+        .then((http.Response res){
+      final int statusCode = res.statusCode;
+      if(statusCode < 200 || statusCode > 400 || json == null){
+        throw new Exception("Error while posting");
+      }
+      return jsonDecode(res.body);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red[600],
@@ -94,25 +225,14 @@ class _InfoState extends State<Info> {
                           ],
                         ),
 
-//                    Row(
-//                      children: <Widget>[
-//                        FlutterRadioButtonGroup(
-//                          items: [
-//                            "Male",
-//                            "Female"
-//                          ],
-//                          onSelected: (String selected){
-//                            print($selected)
-//                          },
-//                        )
-//                      ],
-//                    ),
 
                         Padding(
                           padding: const EdgeInsets.fromLTRB(18.0, 0, 18.0, 0),
                           child: TextField(
+                            controller: _name,
                             decoration: InputDecoration(
                               labelText: 'ຊື່',
+
                               labelStyle: TextStyle(
                                 fontFamily: "boonhome2",
                                 fontSize: 16.0,
@@ -125,6 +245,7 @@ class _InfoState extends State<Info> {
                         Padding(
                             padding: const EdgeInsets.fromLTRB(18.0, 0, 18.0, 0),
                             child: TextField(
+                              controller: _surname,
                               decoration: InputDecoration(
                                 labelText: 'ນາມສະກຸນ',
                                 labelStyle: TextStyle(
@@ -141,26 +262,21 @@ class _InfoState extends State<Info> {
                             padding: EdgeInsets.fromLTRB(20.0, 8.0, 20.0,8.0),
                             child: SearchableDropdown(
                               isExpanded: true,
-                              items: provinces
-                                  .map<DropdownMenuItem<String>>((String valued) {
-                                return DropdownMenuItem<String>(
-                                  value: valued,
-                                  child: Text(valued),
-                                );
-                              }).toList(),
-                              value: dropProvince,
+                              items: provinceData,
+                              value: selectedProvince,
                               hint: new Text(
-                                  'Select One'
+                                  'ເລືອກແຂວງ'
                               ),
                               searchHint: new Text(
-                                'Select One',
+                                'ຄົ້ນຫາແຂວງ',
                                 style: new TextStyle(
                                     fontSize: 20
                                 ),
                               ),
                               onChanged: (value) {
                                 setState(() {
-                                  dropProvince = value;
+                                    selectedProvince = value;
+                                    setDistrictsOfProvince(value);
                                 });
                               },
                             )
@@ -170,26 +286,21 @@ class _InfoState extends State<Info> {
                             padding: EdgeInsets.fromLTRB(20.0, 8.0, 20.0,8.0),
                             child: SearchableDropdown(
                               isExpanded: true,
-                              items: districts
-                                  .map<DropdownMenuItem<String>>((String valued) {
-                                return DropdownMenuItem<String>(
-                                  value: valued,
-                                  child: Text(valued),
-                                );
-                              }).toList(),
-                              value: dropDistrict,
+                              items: districtData,
+                              value: selectedDistrict,
                               hint: new Text(
-                                  'Select One'
+                                  'ເລືອກເມືອງ'
                               ),
                               searchHint: new Text(
-                                'Select One',
+                                'ຄົ້ນຫາເມືອງ',
                                 style: new TextStyle(
                                     fontSize: 20
                                 ),
                               ),
                               onChanged: (value) {
                                 setState(() {
-                                  dropDistrict = value;
+                                  selectedDistrict = value;
+                                  storeVillagesData(value);
                                 });
                               },
                             )
@@ -198,26 +309,20 @@ class _InfoState extends State<Info> {
                           padding: EdgeInsets.fromLTRB(20.0, 8.0, 20.0,8.0),
                             child: SearchableDropdown(
                               isExpanded: true,
-                              items: villages
-                                  .map<DropdownMenuItem<String>>((String valued) {
-                                return DropdownMenuItem<String>(
-                                  value: valued,
-                                  child: Text(valued),
-                                );
-                              }).toList(),
-                              value: dropVillage,
+                              items: villagesData,
+                              value: selectedVillage,
                               hint: new Text(
-                                  'Select One'
+                                  'ເລືອກບ້ານ'
                               ),
                               searchHint: new Text(
-                                'Select One',
+                                'ຄົ້ນຫາບ້ານ',
                                 style: new TextStyle(
                                     fontSize: 20
                                 ),
                               ),
                               onChanged: (value) {
                                 setState(() {
-                                  dropVillage = value;
+                                  selectedVillage = value;
                                 });
                               },
                             )
@@ -226,6 +331,7 @@ class _InfoState extends State<Info> {
                         Padding(
                             padding: const EdgeInsets.fromLTRB(18.0, 0, 18.0, 10),
                             child: TextField(
+                              controller: _lane,
                               decoration: InputDecoration(
                                 labelText: 'ຮ່ອມ',
                                 labelStyle: TextStyle(
@@ -244,10 +350,13 @@ class _InfoState extends State<Info> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
                             ),
-                            onPressed: () {
-
+                            onPressed: (){
+                              postCustomer(
+                                  {
+                                    'name':_name.text, 'surname':_surname.text,'gender':_gender, 'village_id': getCleanId(selectedVillage), 'lane': _lane.text, 'longitude': lng.toString(), 'latitude':lat.toString()
+                                  }
+                              );
                             },
-
                             color: Colors.red[600],
                             child: Text('ບັນທຶກ', style: TextStyle(color: Colors.white, fontFamily: 'boonhome2', fontSize: 20.0)),
                           ),
