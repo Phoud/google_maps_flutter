@@ -1,13 +1,15 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_radio_button_group/flutter_radio_button_group.dart';
 import 'package:searchable_dropdown/searchable_dropdown.dart';
 import 'package:http/http.dart' as http;
-class Info extends StatefulWidget {
+import 'package:giffy_dialog/giffy_dialog.dart';
 
+import 'loading.dart';
+class Info extends StatefulWidget {
+  static String tag = 'detaill-page';
   var lng;
   var lat;
+
 
   Info({Key key, this.lng, Key info, this.lat}) : super(key: key);
   @override
@@ -17,6 +19,8 @@ class Info extends StatefulWidget {
 class _InfoState extends State<Info> {
   var lng;
   var lat;
+  bool _validateName = false;
+  bool _isLoading = false;
 
   _InfoState(this.lng, this.lat);
   var api = 'http://134.209.170.235/api/general/fetch/address';
@@ -136,6 +140,7 @@ class _InfoState extends State<Info> {
     // TODO: implement initState
     super.initState();
     storeAddressData();
+    _validateName = false;
   }
   @override
   void dispose() {
@@ -146,9 +151,11 @@ class _InfoState extends State<Info> {
     super.dispose();
   }
 
+
   Future postCustomer(var body) async{
     return await http.post(Uri.encodeFull(postAPI), body: body, headers: {"Accept": "application/json"})
         .then((http.Response res){
+
       final int statusCode = res.statusCode;
       if(statusCode < 200 || statusCode > 400 || json == null){
         throw new Exception("Error while posting");
@@ -164,8 +171,11 @@ class _InfoState extends State<Info> {
       appBar: AppBar(
         backgroundColor: Colors.red[600],
         elevation: 0.0,
+        iconTheme: IconThemeData(
+          color: Colors.white
+        ),
       ),
-      body: Center(
+      body: _isLoading ? new LoadingPage() : Center(
         child: Container(
           child: Column(
             children: <Widget>[
@@ -232,10 +242,10 @@ class _InfoState extends State<Info> {
                             controller: _name,
                             decoration: InputDecoration(
                               labelText: 'ຊື່',
-
+                              errorText: _validateName ? 'ກະລຸນາໃສ່ຊື່' : null,
                               labelStyle: TextStyle(
                                 fontFamily: "boonhome2",
-                                fontSize: 16.0,
+                                fontSize: 18.0,
                                 color: Colors.deepOrange
                               ),
 
@@ -250,7 +260,7 @@ class _InfoState extends State<Info> {
                                 labelText: 'ນາມສະກຸນ',
                                 labelStyle: TextStyle(
                                     fontFamily: "boonhome2",
-                                    fontSize: 16.0,
+                                    fontSize: 18.0,
                                     color: Colors.deepOrange
                                 ),
 
@@ -265,8 +275,12 @@ class _InfoState extends State<Info> {
                               items: provinceData,
                               value: selectedProvince,
                               hint: new Text(
-                                  'ເລືອກແຂວງ'
+                                  'ເລືອກແຂວງ', style: TextStyle(
+                                fontSize: 16.0,
+                                color: Colors.deepOrange
                               ),
+                              ),
+
                               searchHint: new Text(
                                 'ຄົ້ນຫາແຂວງ',
                                 style: new TextStyle(
@@ -289,7 +303,10 @@ class _InfoState extends State<Info> {
                               items: districtData,
                               value: selectedDistrict,
                               hint: new Text(
-                                  'ເລືອກເມືອງ'
+                                  'ເລືອກເມືອງ',style: TextStyle(
+                                  fontSize: 16.0,
+                                  color: Colors.deepOrange
+                              ),
                               ),
                               searchHint: new Text(
                                 'ຄົ້ນຫາເມືອງ',
@@ -312,7 +329,10 @@ class _InfoState extends State<Info> {
                               items: villagesData,
                               value: selectedVillage,
                               hint: new Text(
-                                  'ເລືອກບ້ານ'
+                                  'ເລືອກບ້ານ', style: TextStyle(
+                                  fontSize: 16.0,
+                                  color: Colors.deepOrange
+                              ),
                               ),
                               searchHint: new Text(
                                 'ຄົ້ນຫາບ້ານ',
@@ -332,11 +352,13 @@ class _InfoState extends State<Info> {
                             padding: const EdgeInsets.fromLTRB(18.0, 0, 18.0, 10),
                             child: TextField(
                               controller: _lane,
+
                               decoration: InputDecoration(
                                 labelText: 'ຮ່ອມ',
+
                                 labelStyle: TextStyle(
                                     fontFamily: "boonhome2",
-                                    fontSize: 16.0,
+                                    fontSize: 18.0,
                                     color: Colors.deepOrange
                                 ),
 
@@ -351,16 +373,54 @@ class _InfoState extends State<Info> {
                               borderRadius: BorderRadius.circular(24),
                             ),
                             onPressed: (){
-                              postCustomer(
-                                  {
-                                    'name':_name.text, 'surname':_surname.text,'gender':_gender, 'village_id': getCleanId(selectedVillage), 'lane': _lane.text, 'longitude': lng.toString(), 'latitude':lat.toString()
-                                  }
-                              );
+                              if(_name.text.isEmpty){
+                                setState(() {
+                                  _validateName = true;
+                                });
+                              }else{
+                                setState(() {
+                                  _isLoading = true;
+                                });
+                                postCustomer(
+                                    {
+                                      'name':_name.text, 'surname':_surname.text,'gender':_gender, 'village_id': getCleanId(selectedVillage), 'lane': _lane.text, 'longitude': lng.toString(), 'latitude':lat.toString()
+                                    }
+                                ).then((res){
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+                                  showDialog(
+                                      context: context,builder: (_) => NetworkGiffyDialog(
+                                    image: Image.asset("assets/giphy.gif"),
+                                    title: Text('ບັນທຶກສໍາເລັດ!',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 22.0,
+                                            fontFamily: 'boonhome2',
+                                            fontWeight: FontWeight.w600)),
+                                    description:Text('ບັນທຶກສໍາເລັດແລ້ວເດີ.',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    entryAnimation: EntryAnimation.DEFAULT,
+                                    onOkButtonPressed: () {
+                                      Navigator.of(context).popUntil((route) => route.isFirst);
+                                    },
+
+                                    onlyOkButton: true,
+                                    buttonOkText: Text('ຕົກລົງ', style: TextStyle(
+                                      fontFamily: 'boonhome2',
+                                      fontSize: 16.0,
+                                      color: Colors.white,
+                                    ),),
+                                  ) );
+                                });
+                              }
                             },
                             color: Colors.red[600],
                             child: Text('ບັນທຶກ', style: TextStyle(color: Colors.white, fontFamily: 'boonhome2', fontSize: 20.0)),
                           ),
                         )
+
 
                       ],
                     ),
